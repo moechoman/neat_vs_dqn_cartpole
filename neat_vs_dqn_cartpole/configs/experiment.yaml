@@ -1,0 +1,30 @@
+env_id: CartPole-v1
+
+seeds: [0, 1, 2, 3, 4]
+
+budget:
+  max_env_steps: 200000        # Fairness rule: same env steps for NEAT and DQN
+  eval_episodes: 100           # Final evaluation episodes
+  solved_threshold: 475.0      # Standard CartPole criterion
+
+logging:
+  eval_every_steps: 10000
+  save_videos: true
+  video_episode_limit: 1
+
+dqn:
+  learning_rate: 0.0001
+  gamma: 0.99
+  buffer_size: 50000
+  batch_size: 64
+  learning_starts: 1000
+  target_update_interval: 1000
+  train_freq: 4
+  gradient_steps: 1
+  exploration_fraction: 0.25
+  exploration_final_eps: 0.05
+
+neat:
+  pop_size: 150
+  max_generations: 1000        # We will stop early using env-step budget anyway
+  episodes_per_genome: 1       # More evaluations per genome can be very costly

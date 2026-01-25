@@ -1,0 +1,26 @@
+# --- Core environment ---
+gymnasium[classic-control]==0.29.1
+
+# --- RL baseline (DQN) + extras (progress bar + utilities) ---
+stable-baselines3[extra]==2.2.1
+
+# --- Evolutionary approach ---
+neat-python==0.92
+
+# --- Scientific stack ---
+numpy>=1.24
+pandas>=2.0
+matplotlib>=3.7
+
+# --- Config / logging ---
+PyYAML>=6.0
+
+# --- Progress bar tools (also included via sb3[extra], but explicit is safer) ---
+tqdm>=4.66
+rich>=13.7
+
+# --- Video recording (for render_policy.py / RecordVideo) ---
+pygame>=2.5.2
+moviepy>=1.0.3
+imageio>=2.34
+imageio-ffmpeg>=0.4.9
