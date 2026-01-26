@@ -1,3 +1,4 @@
+from logging import config
 import os
 import time
 import argparse
@@ -39,24 +40,52 @@ def eval_genome(
     env_id: str,
     base_seed: int,
     tracker: BudgetTracker,
+    episodes_per_genome: int = 3,
 ) -> Tuple[float, int]:
     """
-    Evaluate a single genome on ONE episode (Option 1).
-    Returns fitness (reward) and env_steps used.
+    Evaluate a single genome on K episodes and return:
+    - fitness = average episodic reward across K episodes
+    - env steps used
     """
     if tracker.exhausted():
         return 0.0, 0
 
-    env = make_env(env_id, seed=base_seed)
+    env = gym.make(env_id)
 
     net = neat.nn.FeedForwardNetwork.create(genome, config)
     act_fn = make_neat_act_fn(net)
 
-    reward, steps = episode_rollout(env, act_fn)
+    total_reward = 0.0
+    total_steps = 0
+
+    for k in range(int(episodes_per_genome)):
+        if tracker.exhausted():
+            break
+
+        obs, _ = env.reset(seed=base_seed + k)
+        ep_reward = 0.0
+        ep_steps = 0
+
+        for _ in range(500):
+            action = act_fn(obs)
+            obs, reward, terminated, truncated, _ = env.step(action)
+            ep_reward += float(reward)
+            ep_steps += 1
+            if terminated or truncated:
+                break
+
+        total_reward += ep_reward
+        total_steps += ep_steps
+        tracker.add(ep_steps)
+
     env.close()
 
-    tracker.add(steps)
-    return float(reward), int(steps)
+    if total_steps == 0:
+        return 0.0, 0
+
+    avg_reward = total_reward / max(1, int(episodes_per_genome))
+    return float(avg_reward), int(total_steps)
+
 
 
 def main():
@@ -125,7 +154,9 @@ def main():
                     env_id=env_id,
                     base_seed=ep_seed,
                     tracker=tracker,
+                    episodes_per_genome=int(cfg["neat"]["episodes_per_genome"]),  # ✅ reads from YAML
                 )
+
                 genome.fitness = fit
 
         pop.run(fitness_fn, 1)  # run exactly ONE generation

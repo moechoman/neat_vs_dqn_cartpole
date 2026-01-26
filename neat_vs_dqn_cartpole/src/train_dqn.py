@@ -22,16 +22,17 @@ class EvalLoggerCallback(BaseCallback):
         self.run_dir = run_dir
 
         self.eval_every = int(cfg["logging"]["eval_every_steps"])
-        self.eval_episodes = int(cfg["budget"]["eval_episodes"])
         self.env_id = cfg["env_id"]
 
         self.records = []
+        self.best_mean = -1e9
+        self.best_model_path = os.path.join(self.run_dir, "best_model.zip")
 
     def _on_step(self) -> bool:
         if self.num_timesteps % self.eval_every == 0:
-            # Evaluate deterministic policy
+            # Evaluate deterministic policy (20 eps)
             def act_fn(obs):
-                action, _ = self.model.predict(obs, deterministic=True,)
+                action, _ = self.model.predict(obs, deterministic=True)
                 return int(action)
 
             stats = evaluate_policy(
@@ -41,10 +42,13 @@ class EvalLoggerCallback(BaseCallback):
                 n_episodes=20,
             )
 
+            mean_r = stats["mean_reward"]
+            std_r = stats["std_reward"]
+
             row = {
                 "env_steps": int(self.num_timesteps),
-                "mean_reward_20ep": stats["mean_reward"],
-                "std_reward_20ep": stats["std_reward"],
+                "mean_reward_20ep": mean_r,
+                "std_reward_20ep": std_r,
                 "timestamp": time.time(),
             }
             self.records.append(row)
@@ -54,7 +58,13 @@ class EvalLoggerCallback(BaseCallback):
                 index=False
             )
 
+            # ✅ Save best checkpoint to prevent collapse ruining final score
+            if mean_r > self.best_mean:
+                self.best_mean = mean_r
+                self.model.save(self.best_model_path)
+
         return True
+
 
 
 def main():
@@ -114,9 +124,15 @@ def main():
     model.save(model_path)
     env.close()
 
-    # Final evaluation (100 episodes)
+    # Load best model if available (prevents collapse)
+    best_path = os.path.join(run_dir, "best_model.zip")
+    if os.path.exists(best_path):
+        best_model = DQN.load(best_path)
+    else:
+        best_model = model
+
     def act_fn(obs):
-        action, _ = model.predict(obs, deterministic=True)
+        action, _ = best_model.predict(obs, deterministic=True)
         return int(action)
 
     final_stats = evaluate_policy(
@@ -125,6 +141,7 @@ def main():
         seed=seed + 999,
         n_episodes=int(cfg["budget"]["eval_episodes"]),
     )
+
 
     final_stats["train_time_sec"] = float(train_time)
     final_stats["max_env_steps"] = int(max_steps)

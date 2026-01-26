@@ -13,19 +13,20 @@ logging:
   video_episode_limit: 1
 
 dqn:
-  learning_rate: 0.00005          # ↓ smaller LR stabilizes Q updates
+  learning_rate: 0.0001
   gamma: 0.99
-  buffer_size: 100000             # ↑ more diverse replay
-  batch_size: 128                 # ↑ smoother gradients
-  learning_starts: 5000           # ↑ fill buffer before learning
-  target_update_interval: 500     # ↓ more frequent target sync
+  buffer_size: 50000
+  batch_size: 64
+  learning_starts: 1000
+  target_update_interval: 1000
   train_freq: 4
   gradient_steps: 1
-  exploration_fraction: 0.20      # slightly faster decay
-  exploration_final_eps: 0.02     # less randomness at the end
+  exploration_fraction: 0.25
+  exploration_final_eps: 0.05
+
 
 
 neat:
   pop_size: 150
   max_generations: 1000        # We will stop early using env-step budget anyway
-  episodes_per_genome: 1       # More evaluations per genome can be very costly
+  episodes_per_genome: 3       # More evaluations per genome can be very costly
